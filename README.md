@@ -27,7 +27,7 @@ There are two proxy types — forward and reverse — and they protect opposite 
 ### Forward Proxy
 
 A forward proxy sits on the **client side**, acting as a middleman between the client and the internet.
-
+![SocFortress WAF Dashboard](images/FowardProxy.png)
 ```
 You → [Forward Proxy] → Internet
 ```
@@ -39,7 +39,7 @@ Common uses: VPNs, corporate internet filters, Tor.
 ### Reverse Proxy
 
 A reverse proxy sits on the **server side**, acting as a middleman between the internet and the server.
-
+![SocFortress WAF Dashboard](images/ReverseProxy.png)
 ```
 User → [Reverse Proxy] → Your actual server
 ```
@@ -49,6 +49,7 @@ Real-world analogy: calling a company's main phone number. A receptionist answer
 Common uses: load balancers, CDNs like Cloudflare, and WAFs.
 
 A WAF is a reverse proxy. The user thinks they are communicating directly with the application. In reality they are communicating with the WAF. The WAF decides whether to forward the request to the application or terminate it.
+![SocFortress WAF Dashboard](images/WAFrepresentation.png)
 
 The application never sees a SQLi payload, an XSS attempt, or a path traversal string. The WAF absorbed it before it arrived. This is the core value of the architecture — protection at the perimeter, transparent to the application behind it. Defence at the network edge means the application does not need to handle every possible attack vector itself.
 
@@ -142,6 +143,7 @@ SecRule  VARIABLE  "OPERATOR [value]"  "id:AUTO, phase:N, ACTION, msg:'descripti
 ```
 
 Reading it as a sentence: *"If this VARIABLE matches this OPERATOR, perform these ACTIONS."*
+<img width="1623" height="237" alt="image" src="https://github.com/user-attachments/assets/96bac532-3d2d-43a8-aaa3-b5e5669e4f0c" />
 
 An example:
 
@@ -377,7 +379,7 @@ The first rule runs in phase:5 — after the backend has responded. Every 401 (f
 
 ---
 
-## Putting Custom Rules Together — Real Deployed Examples
+## Putting Custom Rules Together
 
 The following are the custom rules deployed in the SocFortress WAF lab, sitting on top of OWASP CRS.
 
@@ -456,16 +458,6 @@ The testing approach in this lab used a Python script (`attack_simulation.py`) f
 
 Three-layer verification matters because each layer can fail independently. A WAF can block something without logging it. A SIEM integration can be silently misconfigured. HTTP 403 alone does not confirm the full pipeline is working.
 
-### The IDOR Example
-
-One of the test cases stands out because it demonstrates the limits of WAF protection more clearly than anything else.
-
-The test sends `GET /api/accounts?user_id=3` while authenticated as a different user. The NorthBridge Bank backend does not validate that the requested `user_id` matches the authenticated session — it just returns the data. With the WAF in full blocking mode, this request goes through as a `200 OK` and returns another user's bank account data.
-
-The WAF has nothing to detect. There is no injection payload. There is no suspicious encoding. There is no known attack signature. From the WAF's perspective, a logged-in user sent a normal GET request with a number in the query string. The request is structurally identical to a legitimate request.
-
-The fix is in the application: `if (req.query.user_id !== req.session.user.id) return res.status(403)`. No WAF rule can substitute for that line of code.
-
 ---
 
 ## SIEM Integration — Forwarding WAF Events to Wazuh
@@ -497,6 +489,7 @@ The platform supports three channel types:
 - **Email** — requires SMTP configuration (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` in `.env`)
 - **Slack** — webhook URL integration
 - **Webhook** — HTTP POST to any endpoint
+  <img width="1696" height="397" alt="image" src="https://github.com/user-attachments/assets/6b2ccda8-651b-419c-bf4d-1ab30b459a5a" />
 
 Alert Rules define the conditions that trigger a notification. Each rule specifies:
 
@@ -505,6 +498,7 @@ Alert Rules define the conditions that trigger a notification. Each rule specifi
 - **`window_minutes`** — the time window over which the condition is evaluated (1–60 minutes)
 - **`severity`** — the label attached to the notification (INFO, WARNING, CRITICAL)
 - **`channel_id`** — which notification channel to send to when the condition is met
+  <img width="1675" height="308" alt="image" src="https://github.com/user-attachments/assets/ac5eb871-8f35-4220-a57c-4b262ed6ce40" />
 
 A practical example: a rule with `condition_type: blocked_count`, `threshold: 50`, `window_minutes: 5` fires a notification if more than 50 requests are blocked within any 5-minute window — useful for catching active attack campaigns or unexpected traffic spikes without manually watching the log viewer.
 
@@ -524,6 +518,7 @@ The OWASP CRS exposes a paranoia setting from 1 to 4:
 - **Level 2** — additional rules with stricter matching patterns. Better detection coverage, introduces some new false positives.
 - **Level 3** — significantly broader rule coverage. More false positives that require active management.
 - **Level 4** — maximum detection aggressiveness. High false positive rate. Only appropriate for very sensitive, low-traffic applications with dedicated tuning effort.
+  <img width="516" height="619" alt="image" src="https://github.com/user-attachments/assets/ae55d748-5555-4bac-ad68-9cab5fac31e6" />
 
 ### Deployment Sequence
 
